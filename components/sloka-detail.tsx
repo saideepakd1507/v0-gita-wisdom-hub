@@ -41,11 +41,11 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     brief: true,
-    simple: false,
-    detail: false,
-    matters: false,
-    example: false,
-    motivation: false,
+    simple: true,
+    detail: true,
+    matters: true,
+    example: true,
+    motivation: true,
   });
 
   const toggleSection = (section: string) => {
@@ -129,7 +129,7 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
                 </Badge>
               </div>
               <div className="flex flex-wrap gap-2">
-                {sloka.topics.map((topic) => (
+                {(sloka.topics || []).map((topic) => (
                   <Badge key={topic} variant="outline" className="text-xs">
                     {topic}
                   </Badge>

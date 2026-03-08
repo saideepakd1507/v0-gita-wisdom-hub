@@ -38,15 +38,50 @@ export function SearchBar({ onSearch, onSelectSloka, allSlokas }: SearchBarProps
     const q = searchQuery.toLowerCase().trim();
     if (!q || q.length < 2) return [];
 
+    // Map common search terms to topics
+    const topicAliases: Record<string, string[]> = {
+      'love': ['love', 'devotion', 'relationships', 'bhakti'],
+      'peace': ['mindfulness', 'meditation', 'spiritual', 'stress'],
+      'anxiety': ['stress', 'fear', 'mindfulness'],
+      'work': ['karma', 'duty', 'success'],
+      'money': ['success', 'karma', 'detachment'],
+      'family': ['relationships', 'duty'],
+      'death': ['death', 'immortality', 'self'],
+      'god': ['devotion', 'spiritual', 'love'],
+      'krishna': ['devotion', 'spiritual', 'wisdom'],
+      'action': ['karma', 'duty', 'detachment'],
+      'meditation': ['mindfulness', 'spiritual', 'self'],
+      'yoga': ['mindfulness', 'karma', 'spiritual'],
+      'soul': ['self', 'death', 'spiritual'],
+      'atman': ['self', 'spiritual', 'wisdom'],
+      'dharma': ['duty', 'karma', 'wisdom'],
+      'happiness': ['mindfulness', 'detachment', 'spiritual'],
+      'suffering': ['stress', 'depression', 'detachment'],
+      'sadness': ['depression', 'stress', 'mindfulness'],
+      'motivation': ['depression', 'success', 'karma'],
+      'focus': ['mindfulness', 'wisdom', 'success'],
+      'fear': ['fear', 'stress', 'spiritual'],
+      'worry': ['stress', 'fear', 'mindfulness'],
+    };
+
+    const expandedTopics = topicAliases[q] || [];
+
     return allSlokas.filter(sloka => {
-      const matchesTopic = sloka.topics.some(topic => 
+      // Check if topics array exists and is valid
+      const topics = sloka.topics && Array.isArray(sloka.topics) ? sloka.topics : [];
+      
+      const matchesTopic = topics.some(topic => 
         topic.toLowerCase().includes(q) || q.includes(topic.toLowerCase())
       );
-      const matchesBrief = sloka.brief.toLowerCase().includes(q);
-      const matchesSpeaker = sloka.speaker.toLowerCase().includes(q);
-      const matchesId = sloka.id.includes(q);
+      const matchesExpandedTopic = expandedTopics.some(alias => 
+        topics.some(topic => topic.toLowerCase() === alias)
+      );
+      const matchesBrief = sloka.brief && sloka.brief.toLowerCase().includes(q);
+      const matchesSpeaker = sloka.speaker && sloka.speaker.toLowerCase().includes(q);
+      const matchesId = sloka.id && sloka.id.includes(q);
+      const matchesChapter = q.includes('chapter') && sloka.chapter.toString() === q.replace(/[^0-9]/g, '');
       
-      return matchesTopic || matchesBrief || matchesSpeaker || matchesId;
+      return matchesTopic || matchesExpandedTopic || matchesBrief || matchesSpeaker || matchesId || matchesChapter;
     });
   }, [allSlokas]);
 

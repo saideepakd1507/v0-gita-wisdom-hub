@@ -28,7 +28,7 @@ const allSlokas = generateAllSlokas();
 const enhancedTopics = topics.map(topic => ({
   ...topic,
   description: getTopicDescription(topic.id),
-  slokaCount: allSlokas.filter(s => s.topics.includes(topic.id)).length,
+  slokaCount: allSlokas.filter(s => s.topics && Array.isArray(s.topics) && s.topics.includes(topic.id)).length,
 }));
 
 function getTopicDescription(topicId: string): string {
@@ -78,7 +78,7 @@ export default function GitaWisdomHub() {
       result = result.filter(s => s.chapter === filterChapter);
     }
     if (filterTopic) {
-      result = result.filter(s => s.topics.includes(filterTopic));
+      result = result.filter(s => s.topics && Array.isArray(s.topics) && s.topics.includes(filterTopic));
     }
     
     return result;
@@ -610,7 +610,7 @@ export default function GitaWisdomHub() {
                         </p>
 
                         <div className="flex flex-wrap gap-1">
-                          {sloka.topics.slice(0, 3).map((topic) => (
+                          {(sloka.topics || []).slice(0, 3).map((topic) => (
                             <Badge key={topic} variant="outline" className="text-xs">
                               {topics.find(t => t.id === topic)?.name || topic}
                             </Badge>
