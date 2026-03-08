@@ -1,32 +1,40 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Geist, Geist_Mono, Noto_Serif_Devanagari } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geist = Geist({ 
+  subsets: ["latin"],
+  variable: '--font-geist'
+});
+
+const geistMono = Geist_Mono({ 
+  subsets: ["latin"],
+  variable: '--font-geist-mono'
+});
+
+const notoSerifDevanagari = Noto_Serif_Devanagari({
+  subsets: ["devanagari"],
+  variable: '--font-devanagari',
+  weight: ['400', '500', '600', '700']
+});
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+  title: 'Gita Wisdom Hub - Divine Knowledge from Bhagavad Gita',
+  description: 'Explore all 700 slokas from the Bhagavad Gita with translations in 10 languages, audio recitation, and practical wisdom for modern life. Experience divine knowledge from Lord Krishna.',
+  keywords: ['Bhagavad Gita', 'Krishna', 'Spiritual Wisdom', 'Hindu Scripture', 'Meditation', 'Karma Yoga', 'Dharma'],
+  authors: [{ name: 'Gita Wisdom Hub' }],
+  openGraph: {
+    title: 'Gita Wisdom Hub - Divine Knowledge from Bhagavad Gita',
+    description: 'All 700 slokas with translations, audio, and practical wisdom',
+    type: 'website',
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#1a1625',
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
@@ -35,8 +43,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang="en" className="dark">
+      <body className={`${geist.variable} ${geistMono.variable} ${notoSerifDevanagari.variable} font-sans antialiased`}>
         {children}
         <Analytics />
       </body>
