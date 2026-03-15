@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/lib/language-context';
 
 interface Speaker {
   name: string;
@@ -54,14 +55,16 @@ const speakers: Speaker[] = [
 ];
 
 export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
+  const { t } = useLanguage();
+
   return (
     <section className="py-12">
       <div className="mb-8">
         <h2 className="text-3xl font-bold divine-text mb-2">
-          Speakers of the Gita
+          {t('speakersOfGita')}
         </h2>
         <p className="text-muted-foreground">
-          700 slokas spoken by four distinct voices
+          700 {t('slokas')} spoken by four distinct voices
         </p>
       </div>
 
@@ -99,7 +102,7 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
                     <p className="text-sm text-muted-foreground">{speaker.role}</p>
                   </div>
                   <Badge className={`bg-gradient-to-r ${speaker.color} text-white`}>
-                    {speaker.slokaCount} slokas
+                    {speaker.slokaCount} {t('slokas')}
                   </Badge>
                 </div>
                 
@@ -108,7 +111,7 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
                 </p>
 
                 <div className="flex items-center text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  View all slokas by {speaker.name}
+                  {t('viewAllSlokas')} {speaker.name}
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>
@@ -120,7 +123,7 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
       {/* Speaker Stats Bar */}
       <div className="mt-8 divine-card rounded-2xl p-6">
         <h4 className="text-sm font-semibold text-muted-foreground mb-4">
-          Sloka Distribution
+          {t('slokaDistribution')}
         </h4>
         <div className="relative h-8 rounded-full overflow-hidden bg-muted">
           <motion.div

@@ -18,7 +18,11 @@ import { SlokaDetail } from '@/components/sloka-detail';
 import { TopicsSection } from '@/components/topics-section';
 import { ChaptersSection } from '@/components/chapters-section';
 import { SpeakersSection } from '@/components/speakers-section';
-import { AudioPlayer } from '@/components/audio-player';
+import { AudioPlayer, SlokaAudioPlayer } from '@/components/audio-player';
+import { DivineDarshan, type DivineDarshanItem } from '@/components/divine-darshan';
+import { DivineDarshanModal } from '@/components/divine-darshan-modal';
+import { LanguageSelector } from '@/components/language-selector';
+import { LanguageProvider, useLanguage } from '@/lib/language-context';
 import { chapters, topics, generateAllSlokas, type Sloka } from '@/lib/gita-data';
 
 // Generate all slokas once
@@ -53,13 +57,15 @@ function getTopicDescription(topicId: string): string {
   return descriptions[topicId] || 'Explore timeless wisdom on this topic.';
 }
 
-export default function GitaWisdomHub() {
+function GitaWisdomHubContent() {
+  const { t, currentLanguage } = useLanguage();
   const [selectedSloka, setSelectedSloka] = useState<Sloka | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [filterSpeaker, setFilterSpeaker] = useState<string | null>(null);
   const [filterChapter, setFilterChapter] = useState<number | null>(null);
   const [filterTopic, setFilterTopic] = useState<string | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [selectedDarshanItem, setSelectedDarshanItem] = useState<DivineDarshanItem | null>(null);
 
   // Handle scroll for back to top button
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -142,6 +148,22 @@ export default function GitaWisdomHub() {
     }));
   }, []);
 
+  // Handle Divine Darshan selection
+  const handleDarshanSelect = useCallback((item: DivineDarshanItem) => {
+    setSelectedDarshanItem(item);
+  }, []);
+
+  // Get translation based on current language
+  const getTranslation = (sloka: Sloka) => {
+    if (currentLanguage === 'sanskrit') {
+      return sloka.translations.english;
+    }
+    return sloka.translations[currentLanguage as keyof typeof sloka.translations] || sloka.translations.english;
+  };
+
+  // Featured sloka
+  const featuredSloka = allSlokas.find(s => s.id === '2.47');
+
   return (
     <div className="min-h-screen divine-gradient">
       {/* Divine Background Effects */}
@@ -179,35 +201,36 @@ export default function GitaWisdomHub() {
                   onClick={() => { setActiveTab('home'); clearFilters(); }}
                   className="rounded-full"
                 >
-                  Home
+                  {t('home')}
                 </Button>
                 <Button
                   variant={activeTab === 'chapters' ? 'default' : 'ghost'}
                   onClick={() => setActiveTab('chapters')}
                   className="rounded-full"
                 >
-                  18 Chapters
+                  {t('chapters')}
                 </Button>
                 <Button
                   variant={activeTab === 'slokas' ? 'default' : 'ghost'}
                   onClick={() => setActiveTab('slokas')}
                   className="rounded-full"
                 >
-                  All 700 Slokas
+                  {t('allSlokas')}
                 </Button>
                 <Button
                   variant={activeTab === 'speakers' ? 'default' : 'ghost'}
                   onClick={() => setActiveTab('speakers')}
                   className="rounded-full"
                 >
-                  Speakers
+                  {t('speakers')}
                 </Button>
               </nav>
 
               <div className="flex items-center gap-2">
+                <LanguageSelector />
                 <Badge variant="outline" className="hidden sm:flex divine-border">
                   <Sparkles className="w-3 h-3 mr-1 text-primary" />
-                  700 Slokas
+                  700 {t('slokas')}
                 </Badge>
               </div>
             </div>
@@ -220,7 +243,7 @@ export default function GitaWisdomHub() {
                 onClick={() => { setActiveTab('home'); clearFilters(); }}
                 className="rounded-full whitespace-nowrap"
               >
-                Home
+                {t('home')}
               </Button>
               <Button
                 variant={activeTab === 'chapters' ? 'default' : 'outline'}
@@ -228,7 +251,7 @@ export default function GitaWisdomHub() {
                 onClick={() => setActiveTab('chapters')}
                 className="rounded-full whitespace-nowrap"
               >
-                Chapters
+                {t('chapters')}
               </Button>
               <Button
                 variant={activeTab === 'slokas' ? 'default' : 'outline'}
@@ -236,7 +259,7 @@ export default function GitaWisdomHub() {
                 onClick={() => setActiveTab('slokas')}
                 className="rounded-full whitespace-nowrap"
               >
-                Slokas
+                {t('slokas')}
               </Button>
               <Button
                 variant={activeTab === 'speakers' ? 'default' : 'outline'}
@@ -244,7 +267,7 @@ export default function GitaWisdomHub() {
                 onClick={() => setActiveTab('speakers')}
                 className="rounded-full whitespace-nowrap"
               >
-                Speakers
+                {t('speakers')}
               </Button>
             </div>
           </div>
@@ -297,8 +320,10 @@ export default function GitaWisdomHub() {
                       transition={{ delay: 0.3 }}
                       className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
                     >
-                      Experience divine wisdom from Lord Krishna. All 700 slokas with 
-                      translations in 10 languages, audio recitation, and practical guidance for modern life.
+                      {currentLanguage === 'english' 
+                        ? 'Experience divine wisdom from Lord Krishna. All 700 slokas with translations in 10 languages, audio recitation, and practical guidance for modern life.'
+                        : t('beginJourneyDesc')
+                      }
                     </motion.p>
 
                     {/* Search Bar */}
@@ -324,11 +349,11 @@ export default function GitaWisdomHub() {
                     >
                       <Badge variant="outline" className="px-4 py-2 text-sm divine-border">
                         <BookOpen className="w-4 h-4 mr-2" />
-                        18 Chapters
+                        {t('chapters')}
                       </Badge>
                       <Badge variant="outline" className="px-4 py-2 text-sm divine-border">
                         <Sparkles className="w-4 h-4 mr-2" />
-                        700 Slokas
+                        700 {t('slokas')}
                       </Badge>
                       <Badge variant="outline" className="px-4 py-2 text-sm divine-border">
                         10 Languages
@@ -336,39 +361,8 @@ export default function GitaWisdomHub() {
                     </motion.div>
                   </section>
 
-                  {/* Featured Krishna Images */}
-                  <section className="py-8">
-                    <h2 className="text-2xl font-bold divine-text mb-6 text-center">
-                      Divine Darshan
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                        { src: '/images/krishna-hero.jpg', title: 'Lord Krishna' },
-                        { src: '/images/arjuna.jpg', title: 'Arjuna' },
-                        { src: '/images/krishna-arjuna-chariot.jpg', title: 'Divine Chariot' },
-                        { src: '/images/krishna-vishwaroop.jpg', title: 'Vishwaroop' },
-                      ].map((img, index) => (
-                        <motion.div
-                          key={img.title}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.1 * index }}
-                          className="relative aspect-square rounded-2xl overflow-hidden divine-border group"
-                        >
-                          <Image
-                            src={img.src}
-                            alt={img.title}
-                            fill
-                            className="object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                          <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <p className="text-sm font-medium text-center">{img.title}</p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </section>
+                  {/* Divine Darshan - Now with click functionality */}
+                  <DivineDarshan onSelectImage={handleDarshanSelect} />
 
                   {/* Topics Section */}
                   <TopicsSection 
@@ -388,45 +382,43 @@ export default function GitaWisdomHub() {
                   />
 
                   {/* Featured Sloka */}
-                  <section className="py-12">
-                    <h2 className="text-3xl font-bold divine-text mb-8 text-center">
-                      Featured Sloka
-                    </h2>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className="divine-card rounded-3xl p-8 max-w-3xl mx-auto"
-                    >
-                      <div className="flex items-center justify-between mb-6">
-                        <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                          Krishna
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">Chapter 2, Verse 47</span>
-                      </div>
-                      
-                      <p className="sanskrit-text text-xl mb-4 leading-relaxed">
-                        कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।
-                        <br />
-                        मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥
-                      </p>
-                      
-                      <p className="text-muted-foreground mb-6">
-                        You have the right to perform your duties, but you are not entitled to the fruits 
-                        of your actions. Never consider yourself the cause of the results, and never be 
-                        attached to inaction.
-                      </p>
+                  {featuredSloka && (
+                    <section className="py-12">
+                      <h2 className="text-3xl font-bold divine-text mb-8 text-center">
+                        {t('featuredSloka')}
+                      </h2>
+                      <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        className="divine-card rounded-3xl p-8 max-w-3xl mx-auto"
+                      >
+                        <div className="flex items-center justify-between mb-6">
+                          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                            {featuredSloka.speaker}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">Chapter 2, Verse 47</span>
+                        </div>
+                        
+                        <p className="sanskrit-text text-xl mb-4 leading-relaxed">
+                          {featuredSloka.sanskrit}
+                        </p>
+                        
+                        <p className="text-muted-foreground mb-6">
+                          {getTranslation(featuredSloka)}
+                        </p>
 
-                      <div className="flex items-center justify-between">
-                        <AudioPlayer chapterVerse="2.47" language="sanskrit" compact />
-                        <Button
-                          onClick={() => handleSelectSloka('2.47')}
-                          className="rounded-full"
-                        >
-                          Read Full Explanation
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </Button>
-                      </div>
-                    </motion.div>
-                  </section>
+                        <div className="flex items-center justify-between">
+                          <SlokaAudioPlayer sloka={featuredSloka} />
+                          <Button
+                            onClick={() => setSelectedSloka(featuredSloka)}
+                            className="rounded-full"
+                          >
+                            {t('readFullExplanation')}
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </section>
+                  )}
 
                   {/* Meditation Image */}
                   <section className="relative py-16 rounded-3xl overflow-hidden">
@@ -440,17 +432,16 @@ export default function GitaWisdomHub() {
                       <div className="absolute inset-0 bg-gradient-to-r from-background/90 to-background/60" />
                     </div>
                     <div className="relative z-10 max-w-xl px-8">
-                      <h2 className="text-3xl font-bold mb-4">Begin Your Spiritual Journey</h2>
+                      <h2 className="text-3xl font-bold mb-4">{t('beginJourney')}</h2>
                       <p className="text-muted-foreground mb-6">
-                        Let the timeless wisdom of the Gita guide you towards inner peace, 
-                        clarity of purpose, and spiritual awakening.
+                        {t('beginJourneyDesc')}
                       </p>
                       <Button 
                         onClick={() => setActiveTab('chapters')}
                         size="lg"
                         className="rounded-full"
                       >
-                        Start Reading
+                        {t('startReading')}
                         <ChevronRight className="w-5 h-5 ml-2" />
                       </Button>
                     </div>
@@ -467,7 +458,7 @@ export default function GitaWisdomHub() {
                 >
                   <div className="mb-8">
                     <h1 className="text-3xl font-bold divine-text mb-2">
-                      18 Chapters of the Bhagavad Gita
+                      {t('chapters')} of the Bhagavad Gita
                     </h1>
                     <p className="text-muted-foreground">
                       Explore each chapter of divine wisdom
@@ -499,7 +490,7 @@ export default function GitaWisdomHub() {
                               {chapter.nameSanskrit}
                             </p>
                             <Badge variant="outline" className="text-xs">
-                              {chapter.totalVerses} verses
+                              {chapter.totalVerses} {t('verses')}
                             </Badge>
                           </div>
                         </div>
@@ -523,16 +514,16 @@ export default function GitaWisdomHub() {
                     <div>
                       <h1 className="text-3xl font-bold divine-text mb-2">
                         {filterChapter 
-                          ? `Chapter ${filterChapter} Slokas`
+                          ? `Chapter ${filterChapter} ${t('slokas')}`
                           : filterSpeaker
-                          ? `Slokas by ${filterSpeaker}`
+                          ? `${t('slokas')} by ${filterSpeaker}`
                           : filterTopic
-                          ? `Slokas on ${topics.find(t => t.id === filterTopic)?.name || filterTopic}`
-                          : 'All 700 Slokas'
+                          ? `${t('slokas')} on ${topics.find(t => t.id === filterTopic)?.name || filterTopic}`
+                          : t('allSlokas')
                         }
                       </h1>
                       <p className="text-muted-foreground">
-                        {filteredSlokas.length} slokas found
+                        {filteredSlokas.length} {t('slokasFound')}
                       </p>
                     </div>
 
@@ -543,12 +534,12 @@ export default function GitaWisdomHub() {
                           onClick={clearFilters}
                           className="rounded-full"
                         >
-                          Clear Filters
+                          {t('clearFilters')}
                         </Button>
                       )}
                       <Button variant="outline" className="rounded-full">
                         <Filter className="w-4 h-4 mr-2" />
-                        Filter
+                        {t('filter')}
                       </Button>
                     </div>
                   </div>
@@ -602,7 +593,7 @@ export default function GitaWisdomHub() {
                               {sloka.speaker}
                             </Badge>
                           </div>
-                          <AudioPlayer chapterVerse={sloka.id} language="sanskrit" compact />
+                          <AudioPlayer chapterVerse={sloka.id} compact text={getTranslation(sloka)} />
                         </div>
                         
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
@@ -660,7 +651,30 @@ export default function GitaWisdomHub() {
             />
           )}
         </AnimatePresence>
+
+        {/* Divine Darshan Modal */}
+        <AnimatePresence>
+          {selectedDarshanItem && (
+            <DivineDarshanModal
+              item={selectedDarshanItem}
+              slokas={allSlokas}
+              onClose={() => setSelectedDarshanItem(null)}
+              onSelectSloka={(sloka) => {
+                setSelectedDarshanItem(null);
+                setSelectedSloka(sloka);
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+export default function GitaWisdomHub() {
+  return (
+    <LanguageProvider>
+      <GitaWisdomHubContent />
+    </LanguageProvider>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, BookOpen, Lightbulb, Calendar, Target, Sparkles, 
@@ -9,26 +9,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioPlayer } from './audio-player';
+import { SlokaAudioPlayer } from './audio-player';
+import { useLanguage, LANGUAGES, type LanguageCode } from '@/lib/language-context';
 import type { Sloka } from '@/lib/gita-data';
 
 interface SlokaDetailProps {
   sloka: Sloka;
   onClose: () => void;
 }
-
-const LANGUAGES = [
-  { code: 'english', name: 'English', flag: 'EN' },
-  { code: 'hindi', name: 'Hindi', flag: 'HI' },
-  { code: 'telugu', name: 'Telugu', flag: 'TE' },
-  { code: 'tamil', name: 'Tamil', flag: 'TA' },
-  { code: 'marathi', name: 'Marathi', flag: 'MR' },
-  { code: 'kannada', name: 'Kannada', flag: 'KN' },
-  { code: 'bengali', name: 'Bengali', flag: 'BN' },
-  { code: 'gujarati', name: 'Gujarati', flag: 'GU' },
-  { code: 'malayalam', name: 'Malayalam', flag: 'ML' },
-  { code: 'punjabi', name: 'Punjabi', flag: 'PA' },
-];
 
 const speakerColors: Record<string, string> = {
   Krishna: 'from-blue-500 to-cyan-500',
@@ -38,7 +26,8 @@ const speakerColors: Record<string, string> = {
 };
 
 export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
+  const { currentLanguage, t, setCurrentLanguage } = useLanguage();
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(currentLanguage);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     brief: true,
     simple: true,
@@ -48,6 +37,11 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
     motivation: true,
   });
 
+  // Sync with global language
+  useEffect(() => {
+    setSelectedLanguage(currentLanguage);
+  }, [currentLanguage]);
+
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -55,50 +49,72 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
     }));
   };
 
+  // Handle language change for translations
+  const handleLanguageChange = (lang: string) => {
+    setSelectedLanguage(lang as LanguageCode);
+  };
+
+  // Get Sanskrit text in selected language script (if available)
+  const getSanskritDisplay = () => {
+    // Sanskrit remains in Devanagari script always
+    return sloka.sanskrit;
+  };
+
+  // Get translation based on selected language
+  const getTranslation = () => {
+    if (selectedLanguage === 'sanskrit') {
+      return sloka.translations.english; // Fallback to English for Sanskrit
+    }
+    return sloka.translations[selectedLanguage as keyof typeof sloka.translations] || sloka.translations.english;
+  };
+
   const sections = [
     {
       id: 'brief',
-      title: 'Brief Overview',
+      titleKey: 'briefOverview',
       icon: BookOpen,
       content: sloka.brief,
       color: 'text-primary',
     },
     {
       id: 'simple',
-      title: 'Simple Explanation',
+      titleKey: 'simpleExplanation',
       icon: Lightbulb,
       content: sloka.simpleExplanation,
       color: 'text-yellow-500',
     },
     {
       id: 'detail',
-      title: 'Detailed Understanding',
+      titleKey: 'detailedUnderstanding',
       icon: BookOpen,
       content: sloka.detail,
       color: 'text-blue-500',
     },
     {
       id: 'matters',
-      title: 'Why This Matters Today',
+      titleKey: 'whyThisMatters',
       icon: Calendar,
       content: sloka.whyThisMattersToday,
       color: 'text-green-500',
     },
     {
       id: 'example',
-      title: 'Practical Example',
+      titleKey: 'practicalExample',
       icon: Target,
       content: sloka.practicalExample,
       color: 'text-orange-500',
     },
     {
       id: 'motivation',
-      title: 'Motivational Takeaway',
+      titleKey: 'motivationalTakeaway',
       icon: Sparkles,
       content: sloka.motivationalTakeaway,
       color: 'text-pink-500',
     },
   ];
+
+  // Filter languages - exclude Sanskrit from translation tabs since we show it separately
+  const translationLanguages = LANGUAGES.filter(l => l.code !== 'sanskrit');
 
   return (
     <motion.div
@@ -120,7 +136,10 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h2 className="text-2xl font-bold divine-text">
-                  Chapter {sloka.chapter}, Verse {sloka.verse}
+                  {t('chapters').includes('Chapter') 
+                    ? `Chapter ${sloka.chapter}, Verse ${sloka.verse}`
+                    : `${t('chapters').replace('18 ', '')} ${sloka.chapter}, ${t('verses')} ${sloka.verse}`
+                  }
                 </h2>
                 <Badge 
                   className={`bg-gradient-to-r ${speakerColors[sloka.speaker]} text-white`}
@@ -155,7 +174,7 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
               <span className="om-symbol text-lg">ॐ</span> Sanskrit
             </h3>
             <p className="sanskrit-text text-xl leading-relaxed text-foreground whitespace-pre-line">
-              {sloka.sanskrit}
+              {getSanskritDisplay()}
             </p>
             <p className="mt-4 text-sm italic text-muted-foreground">
               {sloka.transliteration}
@@ -166,10 +185,10 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
               <Volume2 className="w-4 h-4" />
-              Listen to this Sloka
+              {t('listenSloka')}
             </div>
-            <AudioPlayer 
-              chapterVerse={sloka.id} 
+            <SlokaAudioPlayer 
+              sloka={sloka}
               language={selectedLanguage}
             />
           </div>
@@ -178,21 +197,22 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
               <Globe className="w-4 h-4" />
-              Translation
+              {t('translation')}
             </div>
-            <Tabs value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <Tabs value={selectedLanguage} onValueChange={handleLanguageChange}>
               <TabsList className="flex flex-wrap h-auto gap-1 p-1 bg-muted/50">
-                {LANGUAGES.map((lang) => (
+                {translationLanguages.map((lang) => (
                   <TabsTrigger
                     key={lang.code}
                     value={lang.code}
                     className="text-xs px-2 py-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                   >
-                    {lang.name}
+                    <span className="hidden sm:inline">{lang.name}</span>
+                    <span className="sm:hidden">{lang.flag}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {LANGUAGES.map((lang) => (
+              {translationLanguages.map((lang) => (
                 <TabsContent key={lang.code} value={lang.code} className="mt-4">
                   <div className="divine-border rounded-xl p-4 bg-card/50">
                     <p className="text-lg leading-relaxed">
@@ -217,7 +237,7 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
                 >
                   <div className="flex items-center gap-3">
                     <section.icon className={`w-5 h-5 ${section.color}`} />
-                    <span className="font-semibold">{section.title}</span>
+                    <span className="font-semibold">{t(section.titleKey)}</span>
                   </div>
                   {expandedSections[section.id] ? (
                     <ChevronUp className="w-5 h-5 text-muted-foreground" />
@@ -251,11 +271,11 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
           <div className="flex items-center gap-2">
             <Play className="w-4 h-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Click play to listen in {selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1)}
+              {t('listenSloka').replace('Listen to this Sloka', 'Click play to listen in')} {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
             </span>
           </div>
           <Button onClick={onClose} variant="outline" className="rounded-full">
-            Close
+            {t('close')}
           </Button>
         </div>
       </motion.div>

@@ -1,36 +1,40 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX, RotateCcw } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, RotateCcw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { useLanguage, LANGUAGES, type LanguageCode } from '@/lib/language-context';
 
 interface AudioPlayerProps {
   chapterVerse: string;
-  language: string;
+  language?: string;
   compact?: boolean;
+  text?: string; // Text to speak using TTS
+  sanskritText?: string; // Original Sanskrit text
 }
 
-// Audio URLs for different languages
-const getAudioUrl = (chapter: number, verse: number, language: string): string => {
-  // Using public domain audio sources
-  const baseUrls: Record<string, string> = {
-    english: `https://www.holy-bhagavad-gita.org/public/audio/verses/english/${chapter}-${verse}.mp3`,
-    hindi: `https://www.holy-bhagavad-gita.org/public/audio/verses/hindi/${chapter}-${verse}.mp3`,
-    sanskrit: `https://www.gitasupersite.iitk.ac.in/sites/default/files/audio/BG_${chapter.toString().padStart(2, '0')}_${verse.toString().padStart(2, '0')}.mp3`,
-  };
-  
-  // For other languages, use Sanskrit chanting as fallback (which works for all)
-  const langKey = language.toLowerCase();
-  if (baseUrls[langKey]) {
-    return baseUrls[langKey];
-  }
-  
-  // Universal Sanskrit audio that works for all languages
-  return `https://www.gitasupersite.iitk.ac.in/sites/default/files/audio/BG_${chapter.toString().padStart(2, '0')}_${verse.toString().padStart(2, '0')}.mp3`;
+// Get TTS language code for Web Speech API
+const getTTSLanguage = (language: string): string => {
+  const lang = LANGUAGES.find(l => l.code === language);
+  return lang?.ttsLang || 'en-IN';
 };
 
-export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPlayerProps) {
+// Check if speech synthesis is available
+const isSpeechSynthesisAvailable = (): boolean => {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+};
+
+export function AudioPlayer({ 
+  chapterVerse, 
+  language: propLanguage, 
+  compact = false,
+  text,
+  sanskritText 
+}: AudioPlayerProps) {
+  const { currentLanguage } = useLanguage();
+  const language = propLanguage || currentLanguage;
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -38,125 +42,174 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [useTTS, setUseTTS] = useState(true);
+  
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [chapter, verse] = chapterVerse.split('.').map(Number);
 
-  const initAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+  // Get the text to speak based on language
+  const getTextToSpeak = useCallback((): string => {
+    if (text) return text;
+    if (sanskritText) return sanskritText;
+    // Default Sanskrit sloka for demonstration
+    return `श्लोक ${chapter} अध्याय ${verse}`;
+  }, [text, sanskritText, chapter, verse]);
+
+  // Stop any ongoing speech
+  const stopSpeech = useCallback(() => {
+    if (isSpeechSynthesisAvailable()) {
+      window.speechSynthesis.cancel();
     }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setIsPlaying(false);
+    setCurrentTime(0);
+  }, []);
 
-    const audio = new Audio();
-    audio.crossOrigin = 'anonymous';
-    audio.volume = volume;
-    audio.muted = isMuted;
-    
-    const url = getAudioUrl(chapter, verse, language);
-    audio.src = url;
-
-    audio.addEventListener('loadedmetadata', () => {
-      setDuration(audio.duration);
-      setIsLoading(false);
-      setError(null);
-    });
-
-    audio.addEventListener('timeupdate', () => {
-      setCurrentTime(audio.currentTime);
-    });
-
-    audio.addEventListener('ended', () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    });
-
-    audio.addEventListener('error', () => {
-      setError('Audio unavailable');
-      setIsLoading(false);
-      setIsPlaying(false);
-    });
-
-    audio.addEventListener('waiting', () => {
-      setIsLoading(true);
-    });
-
-    audio.addEventListener('canplay', () => {
-      setIsLoading(false);
-    });
-
-    audioRef.current = audio;
-  }, [chapter, verse, language, volume, isMuted]);
-
+  // Clean up on unmount or language change
   useEffect(() => {
-    initAudio();
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      stopSpeech();
     };
-  }, [initAudio]);
+  }, [stopSpeech]);
 
-  const togglePlay = async () => {
-    if (!audioRef.current) {
-      initAudio();
+  // Reset when language changes
+  useEffect(() => {
+    stopSpeech();
+    setError(null);
+  }, [language, stopSpeech]);
+
+  const speakText = useCallback(async () => {
+    if (!isSpeechSynthesisAvailable()) {
+      setError('Speech not supported');
+      return;
     }
 
-    const audio = audioRef.current;
-    if (!audio) return;
+    // Cancel any existing speech
+    window.speechSynthesis.cancel();
+
+    const textToSpeak = getTextToSpeak();
+    if (!textToSpeak) {
+      setError('No text available');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
 
     try {
-      if (isPlaying) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        setIsLoading(true);
-        await audio.play();
-        setIsPlaying(true);
-        setError(null);
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utteranceRef.current = utterance;
+
+      // Get the TTS language
+      const ttsLang = getTTSLanguage(language);
+      utterance.lang = ttsLang;
+      utterance.rate = 0.85; // Slightly slower for clarity
+      utterance.pitch = 1;
+      utterance.volume = isMuted ? 0 : volume;
+
+      // Try to find a voice for the language
+      const voices = window.speechSynthesis.getVoices();
+      const langVoice = voices.find(v => v.lang.startsWith(ttsLang.split('-')[0]));
+      if (langVoice) {
+        utterance.voice = langVoice;
       }
+
+      // Estimate duration based on text length (rough estimate)
+      const estimatedDuration = Math.max(textToSpeak.length * 0.08, 3);
+      setDuration(estimatedDuration);
+
+      utterance.onstart = () => {
+        setIsLoading(false);
+        setIsPlaying(true);
+        setCurrentTime(0);
+        
+        // Update progress
+        intervalRef.current = setInterval(() => {
+          setCurrentTime(prev => {
+            if (prev >= estimatedDuration) {
+              return prev;
+            }
+            return prev + 0.1;
+          });
+        }, 100);
+      };
+
+      utterance.onend = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+
+      utterance.onerror = (event) => {
+        if (event.error !== 'canceled') {
+          setError('Speech failed');
+        }
+        setIsLoading(false);
+        setIsPlaying(false);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+
+      // Wait for voices to load if needed
+      if (voices.length === 0) {
+        await new Promise<void>((resolve) => {
+          const checkVoices = () => {
+            if (window.speechSynthesis.getVoices().length > 0) {
+              resolve();
+            } else {
+              setTimeout(checkVoices, 100);
+            }
+          };
+          checkVoices();
+        });
+      }
+
+      window.speechSynthesis.speak(utterance);
     } catch {
-      setError('Unable to play audio');
-      setIsPlaying(false);
-    } finally {
+      setError('Speech failed');
       setIsLoading(false);
     }
-  };
+  }, [getTextToSpeak, language, volume, isMuted]);
 
-  const handleSeek = (value: number[]) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
+  const togglePlay = async () => {
+    if (isPlaying) {
+      stopSpeech();
+    } else {
+      await speakText();
     }
   };
 
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
+    if (utteranceRef.current) {
+      utteranceRef.current.volume = newVolume;
     }
     if (newVolume > 0 && isMuted) {
       setIsMuted(false);
-      if (audioRef.current) {
-        audioRef.current.muted = false;
-      }
     }
   };
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
+    if (utteranceRef.current) {
+      utteranceRef.current.volume = !isMuted ? 0 : volume;
     }
   };
 
   const restart = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      setCurrentTime(0);
-    }
+    stopSpeech();
+    speakText();
   };
 
   const formatTime = (time: number): string => {
@@ -166,6 +219,12 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Get language display name
+  const getLanguageDisplay = () => {
+    const lang = LANGUAGES.find(l => l.code === language);
+    return lang?.name || language.charAt(0).toUpperCase() + language.slice(1);
+  };
+
   if (compact) {
     return (
       <div className="flex items-center gap-2">
@@ -173,11 +232,12 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
           variant="ghost"
           size="sm"
           onClick={togglePlay}
-          disabled={isLoading || !!error}
+          disabled={isLoading}
           className="h-8 w-8 p-0 rounded-full bg-primary/20 hover:bg-primary/30"
+          title={`Play in ${getLanguageDisplay()}`}
         >
           {isLoading ? (
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-4 h-4 text-primary animate-spin" />
           ) : isPlaying ? (
             <Pause className="w-4 h-4 text-primary" />
           ) : (
@@ -193,7 +253,7 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
     <div className="audio-player rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          {language.charAt(0).toUpperCase() + language.slice(1)} Audio
+          {getLanguageDisplay()} Audio
         </span>
         {error && <span className="text-xs text-destructive">{error}</span>}
       </div>
@@ -203,11 +263,11 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
           variant="ghost"
           size="icon"
           onClick={togglePlay}
-          disabled={isLoading || !!error}
+          disabled={isLoading}
           className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-accent hover:opacity-90 text-primary-foreground"
         >
           {isLoading ? (
-            <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : isPlaying ? (
             <Pause className="w-5 h-5" />
           ) : (
@@ -220,8 +280,8 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
             value={[currentTime]}
             max={duration || 100}
             step={0.1}
-            onValueChange={handleSeek}
             className="cursor-pointer"
+            disabled
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
@@ -234,6 +294,7 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
           size="icon"
           onClick={restart}
           className="h-8 w-8"
+          title="Restart"
         >
           <RotateCcw className="w-4 h-4" />
         </Button>
@@ -261,5 +322,38 @@ export function AudioPlayer({ chapterVerse, language, compact = false }: AudioPl
         </div>
       </div>
     </div>
+  );
+}
+
+// Specialized component for playing slokas with full text
+export function SlokaAudioPlayer({ 
+  sloka,
+  language: propLanguage,
+}: {
+  sloka: {
+    id: string;
+    sanskrit: string;
+    translations: Record<string, string>;
+  };
+  language?: LanguageCode;
+}) {
+  const { currentLanguage } = useLanguage();
+  const language = propLanguage || currentLanguage;
+  
+  // Get the text based on selected language
+  const getText = () => {
+    if (language === 'sanskrit') {
+      return sloka.sanskrit;
+    }
+    return sloka.translations[language as keyof typeof sloka.translations] || sloka.translations.english;
+  };
+
+  return (
+    <AudioPlayer 
+      chapterVerse={sloka.id}
+      language={language}
+      text={getText()}
+      sanskritText={sloka.sanskrit}
+    />
   );
 }
