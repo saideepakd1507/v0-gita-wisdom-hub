@@ -105,16 +105,39 @@ export function AudioPlayer({
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utteranceRef.current = utterance;
 
-      // Get the TTS language
+      // Get the TTS language - use Hindi for Sanskrit as browsers don't support Sanskrit TTS
       const ttsLang = getTTSLanguage(language);
       utterance.lang = ttsLang;
-      utterance.rate = 0.85; // Slightly slower for clarity
+      utterance.rate = language === 'sanskrit' ? 0.75 : 0.85; // Slower for Sanskrit
       utterance.pitch = 1;
       utterance.volume = isMuted ? 0 : volume;
 
-      // Try to find a voice for the language
-      const voices = window.speechSynthesis.getVoices();
-      const langVoice = voices.find(v => v.lang.startsWith(ttsLang.split('-')[0]));
+      // Wait for voices to load first
+      let voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        await new Promise<void>((resolve) => {
+          const checkVoices = () => {
+            voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+              resolve();
+            } else {
+              setTimeout(checkVoices, 100);
+            }
+          };
+          checkVoices();
+        });
+      }
+
+      // Try to find the best matching voice for the language
+      const langPrefix = ttsLang.split('-')[0];
+      // Prefer Indian voices for Indian languages
+      let langVoice = voices.find(v => v.lang === ttsLang);
+      if (!langVoice) {
+        langVoice = voices.find(v => v.lang.startsWith(langPrefix + '-IN'));
+      }
+      if (!langVoice) {
+        langVoice = voices.find(v => v.lang.startsWith(langPrefix));
+      }
       if (langVoice) {
         utterance.voice = langVoice;
       }
@@ -159,20 +182,6 @@ export function AudioPlayer({
           intervalRef.current = null;
         }
       };
-
-      // Wait for voices to load if needed
-      if (voices.length === 0) {
-        await new Promise<void>((resolve) => {
-          const checkVoices = () => {
-            if (window.speechSynthesis.getVoices().length > 0) {
-              resolve();
-            } else {
-              setTimeout(checkVoices, 100);
-            }
-          };
-          checkVoices();
-        });
-      }
 
       window.speechSynthesis.speak(utterance);
     } catch {

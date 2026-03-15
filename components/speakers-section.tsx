@@ -4,13 +4,13 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/lib/language-context';
+import { useLanguage, type LanguageCode } from '@/lib/language-context';
 
 interface Speaker {
   name: string;
-  role: string;
+  roleKey: string;
   slokaCount: number;
-  description: string;
+  descriptionKey: string;
   image: string;
   color: string;
 }
@@ -22,40 +22,59 @@ interface SpeakersSectionProps {
 const speakers: Speaker[] = [
   {
     name: 'Krishna',
-    role: 'The Supreme Lord',
+    roleKey: 'theSupremeLord',
     slokaCount: 574,
-    description: 'Lord Krishna, the divine charioteer and supreme teacher, speaks the majority of the Gita, revealing the path to liberation.',
+    descriptionKey: 'krishnaDesc',
     image: '/images/krishna-hero.jpg',
     color: 'from-blue-500 to-cyan-500',
   },
   {
     name: 'Arjuna',
-    role: 'The Seeker',
+    roleKey: 'theSeeker',
     slokaCount: 84,
-    description: 'The mighty warrior prince who represents humanity, asking the questions we all have about duty, life, and purpose.',
+    descriptionKey: 'arjunaDesc',
     image: '/images/arjuna.jpg',
     color: 'from-amber-500 to-orange-500',
   },
   {
     name: 'Sanjaya',
-    role: 'The Narrator',
+    roleKey: 'theNarrator',
     slokaCount: 41,
-    description: 'The blessed narrator with divine vision who relates the sacred dialogue to King Dhritarashtra.',
+    descriptionKey: 'sanjayaDesc',
     image: '/images/krishna-arjuna-chariot.jpg',
     color: 'from-green-500 to-emerald-500',
   },
   {
     name: 'Dhritarashtra',
-    role: 'The Blind King',
+    roleKey: 'theBlindKing',
     slokaCount: 1,
-    description: 'The blind king whose single question sets the entire Gita in motion, representing attachment and spiritual blindness.',
+    descriptionKey: 'dhritarashtraDesc',
     image: '/images/krishna-vishwaroop.jpg',
     color: 'from-purple-500 to-violet-500',
   },
 ];
 
+// Translated speaker names
+const speakerNames: Record<LanguageCode, Record<string, string>> = {
+  english: { Krishna: 'Krishna', Arjuna: 'Arjuna', Sanjaya: 'Sanjaya', Dhritarashtra: 'Dhritarashtra' },
+  hindi: { Krishna: 'श्री कृष्ण', Arjuna: 'अर्जुन', Sanjaya: 'संजय', Dhritarashtra: 'धृतराष्ट्र' },
+  telugu: { Krishna: 'శ్రీ కృష్ణుడు', Arjuna: 'అర్జునుడు', Sanjaya: 'సంజయుడు', Dhritarashtra: 'ధృతరాష్ట్రుడు' },
+  tamil: { Krishna: 'ஸ்ரீ கிருஷ்ணர்', Arjuna: 'அர்ஜுனன்', Sanjaya: 'சஞ்சயன்', Dhritarashtra: 'திருதராஷ்டிரன்' },
+  marathi: { Krishna: 'श्री कृष्ण', Arjuna: 'अर्जुन', Sanjaya: 'संजय', Dhritarashtra: 'धृतराष्ट्र' },
+  kannada: { Krishna: 'ಶ್ರೀ ಕೃಷ್ಣ', Arjuna: 'ಅರ್ಜುನ', Sanjaya: 'ಸಂಜಯ', Dhritarashtra: 'ಧೃತರಾಷ್ಟ್ರ' },
+  bengali: { Krishna: 'শ্রী কৃষ্ণ', Arjuna: 'অর্জুন', Sanjaya: 'সঞ্জয়', Dhritarashtra: 'ধৃতরাষ্ট্র' },
+  gujarati: { Krishna: 'શ્રી કૃષ્ણ', Arjuna: 'અર્જુન', Sanjaya: 'સંજય', Dhritarashtra: 'ધૃતરાષ્ટ્ર' },
+  malayalam: { Krishna: 'ശ്രീ കൃഷ്ണൻ', Arjuna: 'അർജ്ജുനൻ', Sanjaya: 'സഞ്ജയൻ', Dhritarashtra: 'ധൃതരാഷ്ട്രർ' },
+  punjabi: { Krishna: 'ਸ਼੍ਰੀ ਕ੍ਰਿਸ਼ਨ', Arjuna: 'ਅਰਜੁਨ', Sanjaya: 'ਸੰਜੈ', Dhritarashtra: 'ਧ੍ਰਿਤਰਾਸ਼ਟਰ' },
+  sanskrit: { Krishna: 'श्रीकृष्णः', Arjuna: 'अर्जुनः', Sanjaya: 'संजयः', Dhritarashtra: 'धृतराष्ट्रः' },
+};
+
 export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
+
+  const getSpeakerName = (name: string) => {
+    return speakerNames[currentLanguage]?.[name] || name;
+  };
 
   return (
     <section className="py-12">
@@ -64,7 +83,7 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
           {t('speakersOfGita')}
         </h2>
         <p className="text-muted-foreground">
-          700 {t('slokas')} spoken by four distinct voices
+          700 {t('slokas')} {t('spokenBy')} 4 {t('speakers').toLowerCase()}
         </p>
       </div>
 
@@ -85,7 +104,7 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
               <div className="relative w-full sm:w-40 h-40 sm:h-auto flex-shrink-0">
                 <Image
                   src={speaker.image}
-                  alt={speaker.name}
+                  alt={getSpeakerName(speaker.name)}
                   fill
                   className="object-cover"
                 />
@@ -97,9 +116,9 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-xl font-bold group-hover:text-primary transition-colors">
-                      {speaker.name}
+                      {getSpeakerName(speaker.name)}
                     </h3>
-                    <p className="text-sm text-muted-foreground">{speaker.role}</p>
+                    <p className="text-sm text-muted-foreground">{t(speaker.roleKey)}</p>
                   </div>
                   <Badge className={`bg-gradient-to-r ${speaker.color} text-white`}>
                     {speaker.slokaCount} {t('slokas')}
@@ -107,11 +126,11 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
                 </div>
                 
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  {speaker.description}
+                  {t(speaker.descriptionKey)}
                 </p>
 
                 <div className="flex items-center text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  {t('viewAllSlokas')} {speaker.name}
+                  {t('viewAllSlokas')} {getSpeakerName(speaker.name)}
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>
@@ -152,10 +171,10 @@ export function SpeakersSection({ onSelectSpeaker }: SpeakersSectionProps) {
           />
         </div>
         <div className="flex justify-between mt-3 text-xs text-muted-foreground">
-          <span>Krishna (82%)</span>
-          <span>Arjuna (12%)</span>
-          <span>Sanjaya (5.9%)</span>
-          <span>Dhritarashtra (0.1%)</span>
+          <span>{getSpeakerName('Krishna')} (82%)</span>
+          <span>{getSpeakerName('Arjuna')} (12%)</span>
+          <span>{getSpeakerName('Sanjaya')} (5.9%)</span>
+          <span>{getSpeakerName('Dhritarashtra')} (0.1%)</span>
         </div>
       </div>
     </section>

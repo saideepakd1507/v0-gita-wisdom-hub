@@ -271,7 +271,7 @@ export function SlokaDetail({ sloka, onClose }: SlokaDetailProps) {
           <div className="flex items-center gap-2">
             <Play className="w-4 h-4 text-primary" />
             <span className="text-sm text-muted-foreground">
-              {t('listenSloka').replace('Listen to this Sloka', 'Click play to listen in')} {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
+              {t('clickPlayToListen')} {LANGUAGES.find(l => l.code === selectedLanguage)?.name}
             </span>
           </div>
           <Button onClick={onClose} variant="outline" className="rounded-full">

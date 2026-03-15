@@ -191,7 +191,7 @@ function GitaWisdomHubContent() {
                 <OmLogo size="md" />
                 <div>
                   <h1 className="text-xl font-bold divine-text">Gita Wisdom</h1>
-                  <p className="text-xs text-muted-foreground">Divine Knowledge Hub</p>
+                  <p className="text-xs text-muted-foreground">{t('divineKnowledgeHub')}</p>
                 </div>
               </div>
               
@@ -320,10 +320,7 @@ function GitaWisdomHubContent() {
                       transition={{ delay: 0.3 }}
                       className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
                     >
-                      {currentLanguage === 'english' 
-                        ? 'Experience divine wisdom from Lord Krishna. All 700 slokas with translations in 10 languages, audio recitation, and practical guidance for modern life.'
-                        : t('beginJourneyDesc')
-                      }
+                      {t('heroDesc')}
                     </motion.p>
 
                     {/* Search Bar */}
@@ -356,7 +353,7 @@ function GitaWisdomHubContent() {
                         700 {t('slokas')}
                       </Badge>
                       <Badge variant="outline" className="px-4 py-2 text-sm divine-border">
-                        10 Languages
+                        10 {t('languages')}
                       </Badge>
                     </motion.div>
                   </section>
@@ -458,10 +455,10 @@ function GitaWisdomHubContent() {
                 >
                   <div className="mb-8">
                     <h1 className="text-3xl font-bold divine-text mb-2">
-                      {t('chapters')} of the Bhagavad Gita
+                      {t('chaptersOfGita')}
                     </h1>
                     <p className="text-muted-foreground">
-                      Explore each chapter of divine wisdom
+                      {t('exploreChapters')}
                     </p>
                   </div>
 
@@ -553,7 +550,7 @@ function GitaWisdomHubContent() {
                           onClick={clearFilters}
                           className="rounded-full data-[state=active]:bg-primary"
                         >
-                          All
+                          {t('all')}
                         </TabsTrigger>
                         {chapters.map(ch => (
                           <TabsTrigger
@@ -562,7 +559,7 @@ function GitaWisdomHubContent() {
                             onClick={() => { setFilterChapter(ch.number); setFilterSpeaker(null); setFilterTopic(null); }}
                             className="rounded-full data-[state=active]:bg-primary"
                           >
-                            Ch {ch.number}
+                            {t('ch')} {ch.number}
                           </TabsTrigger>
                         ))}
                       </TabsList>
